@@ -9,6 +9,7 @@ int PinPitch = 9; // PWM
 int PinCutoff = 10; // PWM??
 bool gMidiGateOn = false;
 uint8_t gMidiNoteValue = 0;
+uint16_t gPitchAnalog = 0;
 
 const uint8_t LOWEST_KEY = 24; // C2
 
@@ -21,24 +22,27 @@ struct MySettings : public midi::DefaultSettings {
 MIDI_CREATE_INSTANCE(SoftwareSerial, MIDIserial, MIDI); // port is selectable here
 //MIDI_CREATE_CUSTOM_INSTANCE(SoftwareSerial, MIDIserial, MIDI, MySettings); // altering settings
 
-void debugNote (byte channel, byte pitch, byte velocity) {
+void debugNote (byte channel, byte pitch, byte velocity, uint16_t PitchAnalog) {
   USBserial.print(channel);
   USBserial.print(" ");
   USBserial.print(pitch);
   USBserial.print(" ");
   USBserial.print(velocity);
+  USBserial.print(" ");
+  USBserial.print(PitchAnalog);
   USBserial.println(" ");
 }
 
 void handleNoteOn(byte channel, byte pitch, byte velocity) {
-  if (note >= LOWEST_KEY) {
-    gMidiGateOn = true;
-    gMidiNoteValue = note;
+  gMidiGateOn = true;
+  gMidiNoteValue = pitch;
+  if (pitch >= LOWEST_KEY) {
+    gPitchAnalog = uint16_t((gMidiNoteValue-LOWEST_KEY)*835.666666666); // + gMidiPitchBend ;  // 8191/12
   }
   digitalWrite(LedInt, HIGH);
   digitalWrite(PinGate, HIGH);
   //analogWrite(PinGate, 169);
-  debugNote(channel, pitch, velocity);
+  debugNote(channel, pitch, velocity, gPitchAnalog);
 }
 
 void handleNoteOff(byte channel, byte pitch, byte velocity) { // NoteOn messages with 0 velocity are interpreted as NoteOffs. 
