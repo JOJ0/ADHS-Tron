@@ -15,29 +15,29 @@ struct MySettings : public midi::DefaultSettings {
 
 //MIDI_CREATE_DEFAULT_INSTANCE(); // binds to default hardware port
 MIDI_CREATE_INSTANCE(SoftwareSerial, MIDIserial, MIDI); // port is selectable here
-//MIDI_CREATE_CUSTOM_INSTANCE(SoftwareSerial, MIDIserial, MIDI, MySettings); // + settings
+//MIDI_CREATE_CUSTOM_INSTANCE(SoftwareSerial, MIDIserial, MIDI, MySettings); // altering settings
 
-/*void debugMIDI () {
-  USBserial.print(statusByte);
+void debugNote (byte channel, byte pitch, byte velocity) {
+  USBserial.print(channel);
   USBserial.print(" ");
-  USBserial.print(dataByte1);
+  USBserial.print(pitch);
   USBserial.print(" ");
-  USBserial.print(dataByte2);
+  USBserial.print(velocity);
   USBserial.println(" ");
-}*/
+}
 
 void handleNoteOn(byte channel, byte pitch, byte velocity) {
   digitalWrite(LedInt, HIGH);
   digitalWrite(PinGate, HIGH);
   //analogWrite(PinGate, 169);
-  //debugMIDI();
+  debugNote(channel, pitch, velocity);
 }
 
 void handleNoteOff(byte channel, byte pitch, byte velocity) { // NoteOn messages with 0 velocity are interpreted as NoteOffs. 
   digitalWrite(LedInt, LOW);
   digitalWrite(PinGate, LOW);
   //analogWrite(PinGate, 0);
-  //debugMIDI(); 
+  debugNote(channel, pitch, velocity);
 }
 
 void setup() {
