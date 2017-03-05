@@ -7,6 +7,10 @@ int LedInt = 13;
 int PinGate = 6; // digital
 int PinPitch = 9; // PWM
 int PinCutoff = 10; // PWM??
+bool gMidiGateOn = false;
+uint8_t gMidiNoteValue = 0;
+
+const uint8_t LOWEST_KEY = 24; // C2
 
 // settings struct
 struct MySettings : public midi::DefaultSettings {
@@ -27,6 +31,10 @@ void debugNote (byte channel, byte pitch, byte velocity) {
 }
 
 void handleNoteOn(byte channel, byte pitch, byte velocity) {
+  if (note >= LOWEST_KEY) {
+    gMidiGateOn = true;
+    gMidiNoteValue = note;
+  }
   digitalWrite(LedInt, HIGH);
   digitalWrite(PinGate, HIGH);
   //analogWrite(PinGate, 169);
@@ -37,7 +45,7 @@ void handleNoteOff(byte channel, byte pitch, byte velocity) { // NoteOn messages
   digitalWrite(LedInt, LOW);
   digitalWrite(PinGate, LOW);
   //analogWrite(PinGate, 0);
-  debugNote(channel, pitch, velocity);
+  //debugNote(channel, pitch, velocity);
 }
 
 void setup() {
