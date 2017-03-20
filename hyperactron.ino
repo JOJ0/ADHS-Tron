@@ -15,8 +15,9 @@ uint16_t gPitchAnalog = 0;
 uint16_t gPitchAnalog_last = 0;
 uint16_t gPitchAnalog_curr = 0;
 
-const uint8_t LOWEST_KEY = 24; // 24=C2, 36=C3
-const uint8_t HIGHEST_KEY = 60; // 84=C7, 72=C6, 60=C5, 48=C4, 
+// Ableton C-2 = C0 = 00, Ableton C2 = C0 = 24
+const uint8_t LOWEST_KEY = 00; // 24=C2, 36=C3
+const uint8_t HIGHEST_KEY = 48; // 84=C7, 72=C6, 60=C5, 48=C4, 
 
 // MIDI settings struct
 struct MySettings : public midi::DefaultSettings {
@@ -49,10 +50,11 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*255*0.083333333/5);
     // teensy 3.2
     //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.083333333/3.3); // 0.055 3.3V=5oct
-    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.021/3.3); // 0.0833333=1/12V
+    gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.02666/3.3); // 0.0833333=1/12V
+    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.0277777778/3.3); // 0.0833333=1/12V
     // mpasserini formula test:  unsigned int in_pitch = dac_max / notes_max * (inNote - notes_lowest);
                                //note_stack.push( in_pitch );
-    gPitchAnalog = uint16_t(4095 / HIGHEST_KEY * (PitchMidi - LOWEST_KEY));
+    //gPitchAnalog = uint16_t(4095 / HIGHEST_KEY * (PitchMidi - LOWEST_KEY));
     analogWriteResolution(12); // DAC to 12bit resolution
     analogWrite(PinPitch, gPitchAnalog);
     digitalWrite(LedInt, HIGH); // LED on
