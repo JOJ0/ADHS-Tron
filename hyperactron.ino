@@ -2,16 +2,15 @@
 #define USBserial Serial
 #define MIDIserial Serial1
 
-// Ableton C-2 = C0 = 00, Ableton C2 = C0 = 24
-const uint8_t LOWEST_KEY = 00; // 24=C2, 36=C3
-const uint8_t HIGHEST_KEY = 48; // 84=C7, 72=C6, 60=C5, 48=C4, 
+// Ableton C-2 = C0 = 00, Ableton C2 = C0 = 24; my keyb default range: 36-72
+const uint8_t LOWEST_KEY = 36; // 24=C2, 36=C3
+const uint8_t HIGHEST_KEY = 72; // 84=C7, 72=C6, 60=C5, 48=C4, 
 
 int LedInt = 13;
 int PinGate = 2; // digital
-//int PinCutoff = 3; // PWM 977 Hz FIXME Teensy?
-int PinCutoff = 3;
-//int PinPitch = 18; // PWM 480 Hz -> change to 0x01 -> 31372.55 FIXME Teensy?
-int PinPitch = A14;
+int PinCutoff = 3; // PWM, to 30000 in setup
+int PinPitch = A14; // DAC, to 30000 in setup
+int PinVeloCutoffSwitch = 5; // digital, velocity controls cutoff on/off switch
 
 //bool gMidiGateOn = false;
 //uint8_t gMidiNoteValue = 0;
@@ -20,6 +19,7 @@ uint16_t gPitchAnalog = 0;
 //uint16_t gPitchAnalog_curr = 0;
 uint8_t gNoteOnCounter = 0;
 uint8_t gNoteOffCounter = 0;
+bool gVelocityCutoff = false;
 
 // MIDI settings struct
 struct MySettings : public midi::DefaultSettings {
@@ -45,8 +45,8 @@ void debugNote (byte channel, byte pitch, byte velocity, uint16_t PitchAnalog) {
 
 void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
   if (PitchMidi >= LOWEST_KEY && PitchMidi <= HIGHEST_KEY) {
-    //gPitchAnalog_last = gPitchAnalog_curr;
     gNoteOnCounter++;
+    //gPitchAnalog_last = gPitchAnalog_curr;
     // nostromo teensy + dac mcp4822
     //gPitchAnalog = uint16_t((gMidiNoteValue-LOWEST_KEY)*835.666666666); // + gMidiPitchBend ;  // 8191/12
     // arduino uno (Konstante? 255 * 0.08333333 / 5 = 42.49999983)
@@ -58,6 +58,10 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     // mpasserini formula test:  unsigned int in_pitch = dac_max / notes_max * (inNote - notes_lowest);
                                //note_stack.push( in_pitch );
     //gPitchAnalog = uint16_t(4095 / HIGHEST_KEY * (PitchMidi - LOWEST_KEY));
+    if (gVelocityCutoff == true) {
+      analogWriteResolution(8); // set to 8bit PWM resolution
+      analogWrite(PinCutoff, Velocity*2);
+    }
     analogWriteResolution(12); // DAC to 12bit resolution
     analogWrite(PinPitch, gPitchAnalog);
     digitalWrite(LedInt, HIGH); // LED on
@@ -65,17 +69,20 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     debugNote(Channel, PitchMidi, Velocity, gPitchAnalog); // DEBUG
     USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
     USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
+    USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
   }
 }
 
-void handleNoteOff(byte channel, byte pitch, byte velocity) { // NoteOn with 0 velo is NoteOff. 
-  gNoteOffCounter++;
-  if (gNoteOnCounter == gNoteOffCounter) {
-    gNoteOnCounter = 0;
-    gNoteOffCounter = 0;
-    digitalWrite(LedInt, LOW);
-    digitalWrite(PinGate, LOW);
-    analogWrite(PinPitch, 0);
+void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with 0 velo is NoteOff. 
+  if (PitchMidi >= LOWEST_KEY && PitchMidi <= HIGHEST_KEY) {
+    gNoteOffCounter++;
+    if (gNoteOnCounter == gNoteOffCounter) {
+      gNoteOnCounter = 0;
+      gNoteOffCounter = 0;
+      digitalWrite(LedInt, LOW);
+      digitalWrite(PinGate, LOW);
+      //analogWrite(PinPitch, 0);
+    }
   }
   USBserial.print("NoteOff - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
   USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
@@ -84,10 +91,11 @@ void handleNoteOff(byte channel, byte pitch, byte velocity) { // NoteOn with 0 v
 void setup() {
   pinMode(LedInt, OUTPUT); // BuiltIn LED
   pinMode(PinGate, OUTPUT); // Gate Pin to digital
+  pinMode(PinVeloCutoffSwitch, INPUT_PULLUP);
   analogWriteResolution(8); // default to 8bit PWM resolution
   //analogWriteFrequency(PinPitch, 30000);
   analogWriteFrequency(PinCutoff, 30000);
-  //analogWrite(PinCutoff, 100); // DEBUG  
+  analogWrite(PinCutoff, 255); // Cutoff fully open initially
   digitalWrite(LedInt, LOW); // LedInt off initially
   //TCCR1B = (TCCR1B & 0b11111000) | 0x01; // timer 1 (pin 9,10) to 31372.55 Hz
   USBserial.begin(115200); // debugging here
@@ -98,6 +106,12 @@ void setup() {
 } 
 
 void loop() {
+  if (digitalRead(PinVeloCutoffSwitch) == LOW) {
+    gVelocityCutoff = true;
+  }
+  else {
+    gVelocityCutoff = false;
+  }
   MIDI.read(); // Read incoming messages
 
   //gPitchAnalog = 2047;
