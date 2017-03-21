@@ -49,12 +49,12 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     //gPitchAnalog_last = gPitchAnalog_curr;
     // nostromo teensy + dac mcp4822
     //gPitchAnalog = uint16_t((gMidiNoteValue-LOWEST_KEY)*835.666666666); // + gMidiPitchBend ;  // 8191/12
-    // arduino uno (Konstante? 255 * 0.08333333 / 5 = 42.49999983)
-    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*255*0.083333333/5);// 0.0833333=1/12V
+    // arduino uno (Konstante? 0.08333333 / 5 = 42.49999983 * 255 )
+    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*0.083333333/5*255);// 0.0833333=1/12V
     // teensy 3.2
-    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.083333333/3.3); // 0.055=1st if 3.3V=5oct
-    gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.02666/3.3); // 0.002666 WORKING, FIXME why?
-    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*4095*0.0277777778/3.3);
+    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*0.083333333/3.3*4095); // 0.055=1st if 3.3V=5oct
+    gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)*0.02577777/3.3*4096); // 0.002666 WORKING, FIXME why?
+    //gPitchAnalog = uint16_t((PitchMidi-LOWEST_KEY)0.0277777778/3.3*4095*);
     // mpasserini formula test:  unsigned int in_pitch = dac_max / notes_max * (inNote - notes_lowest);
                                //note_stack.push( in_pitch );
     //gPitchAnalog = uint16_t(4095 / HIGHEST_KEY * (PitchMidi - LOWEST_KEY));
