@@ -11,6 +11,7 @@ int PinGate = 2; // digital
 int PinCutoff = 3; // PWM, to 30000 in setup
 int PinPitch = A14; // DAC, to 30000 in setup
 int PinVeloCutoffSwitch = 5; // digital, velocity controls cutoff on/off switch
+int PinLedViolet = 7;
 
 //bool gMidiGateOn = false;
 //uint8_t gMidiNoteValue = 0;
@@ -91,11 +92,11 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
 void setup() {
   pinMode(LedInt, OUTPUT); // BuiltIn LED
   pinMode(PinGate, OUTPUT); // Gate Pin to digital
-  pinMode(PinVeloCutoffSwitch, INPUT_PULLUP);
+  pinMode(PinVeloCutoffSwitch, INPUT);
+  pinMode(PinLedViolet, OUTPUT);
   analogWriteResolution(8); // default to 8bit PWM resolution
   //analogWriteFrequency(PinPitch, 30000);
   analogWriteFrequency(PinCutoff, 30000);
-  analogWrite(PinCutoff, 255); // Cutoff fully open initially
   digitalWrite(LedInt, LOW); // LedInt off initially
   //TCCR1B = (TCCR1B & 0b11111000) | 0x01; // timer 1 (pin 9,10) to 31372.55 Hz
   USBserial.begin(115200); // debugging here
@@ -106,11 +107,12 @@ void setup() {
 } 
 
 void loop() {
-  if (digitalRead(PinVeloCutoffSwitch) == LOW) {
-    gVelocityCutoff = true;
+  if (digitalRead(PinVeloCutoffSwitch) == HIGH) {
+    gVelocityCutoff = false; // pink LED + R used as pullup
   }
   else {
-    gVelocityCutoff = false;
+    gVelocityCutoff = true; // violet LED, on separate output pin
+    digitalWrite(PinLedViolet, HIGH);
   }
   MIDI.read(); // Read incoming messages
 
