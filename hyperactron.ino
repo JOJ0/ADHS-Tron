@@ -6,13 +6,15 @@ const uint8_t MIDI_CH = 1;
 // Ableton C-2 = C0 = 00, Ableton C2 = C0 = 24; my keyb default range: 36-72
 const uint8_t LOWEST_KEY = 36; // 24=C2, 36=C3
 const uint8_t HIGHEST_KEY = 72; // 84=C7, 72=C6, 60=C5, 48=C4, 
+const uint8_t CC_CUTOFF = 74; // 74 usually is filter cutoff 
 
 const uint8_t PIN_LED_INT = 13;
 const uint8_t PIN_GATE = 2; // digital
 const uint8_t PIN_CUTOFF = 3; // PWM, to 30000 in setup
 const uint8_t PIN_PITCH = A14; // DAC, to 30000 in setup
 const uint8_t PIN_SWITCH_CUTOFF_MODE = 5; // digital, velocity controls cutoff on/off switch
-const uint8_t PIN_LED_VIOLET = 7;
+const uint8_t PIN_LED_PINK = 7;
+const uint8_t PIN_LED_VIOLET = 9;
 
 //bool gMidiGateOn = false;
 //uint8_t gMidiNoteValue = 0;
@@ -90,10 +92,19 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
   USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
 }
 
+void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
+  if (inNumber == CC_CUTOFF && gVelocityCutoff == false) {
+    analogWriteResolution(8); // set to 8bit PWM resolution
+    analogWrite(PIN_CUTOFF, inValue*2);
+    USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
+  }
+}
+
 void setup() {
   pinMode(PIN_LED_INT, OUTPUT); // BuiltIn LED
   pinMode(PIN_GATE, OUTPUT); // Gate Pin to digital
   pinMode(PIN_SWITCH_CUTOFF_MODE, INPUT);
+  pinMode(PIN_LED_PINK, OUTPUT);
   pinMode(PIN_LED_VIOLET, OUTPUT);
   analogWriteResolution(8); // default to 8bit PWM resolution
   //analogWriteFrequency(PIN_PITCH, 30000);
@@ -104,15 +115,19 @@ void setup() {
   MIDI.begin(MIDI_CH);  // Listen to incoming messages on given channel
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.setHandleNoteOff(handleNoteOff); 
+  MIDI.setHandleControlChange(handleControlChange);
 } 
 
 void loop() {
   if (digitalRead(PIN_SWITCH_CUTOFF_MODE) == HIGH) {
-    gVelocityCutoff = false; // pink LED + R used as pullup
+    gVelocityCutoff = true; // pink LED
+    digitalWrite(PIN_LED_PINK, HIGH);
+    digitalWrite(PIN_LED_VIOLET, LOW);
   }
   else {
-    gVelocityCutoff = true; // violet LED, on separate output pin
+    gVelocityCutoff = false; // violet LED
     digitalWrite(PIN_LED_VIOLET, HIGH);
+    digitalWrite(PIN_LED_PINK, LOW);
   }
   MIDI.read(); // Read incoming messages
 
