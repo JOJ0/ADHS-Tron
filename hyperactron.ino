@@ -66,7 +66,7 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     //gPitchAnalog = uint16_t(4095 / HIGHEST_KEY * (PitchMidi - LOWEST_KEY));
     if (gVelocityCutoff == true) {
       analogWriteResolution(8); // set to 8bit PWM resolution
-      analogWrite(PIN_CUTOFF, Velocity*2);
+      analogWrite(PIN_CUTOFF, Velocity*0.6);
     }
     analogWriteResolution(12); // DAC to 12bit resolution
     analogWrite(PIN_PITCH, gPitchAnalog);
@@ -97,7 +97,7 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
 void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
   if (inNumber == CC_CUTOFF && gVelocityCutoff == false) {
     analogWriteResolution(8); // set to 8bit PWM resolution
-    analogWrite(PIN_CUTOFF, inValue*2);
+    analogWrite(PIN_CUTOFF, inValue*0.9);
     USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
   }
   if (inNumber == CC_LFO_RATE) {
@@ -124,6 +124,7 @@ void setup() {
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.setHandleNoteOff(handleNoteOff); 
   MIDI.setHandleControlChange(handleControlChange);
+  USBserial.println("Hyperactive Teensy ready, waiting for MIDI input...");
 } 
 
 void loop() {
