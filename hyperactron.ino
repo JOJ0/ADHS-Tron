@@ -26,6 +26,8 @@ uint16_t gPitchAnalog = 0;
 uint8_t gNoteOnCounter = 0;
 uint8_t gNoteOffCounter = 0;
 bool gVelocityCutoff = false;
+uint8_t gClockCount = 0;
+uint8_t gBeatCount = 1;
 
 // MIDI settings struct
 struct MySettings : public midi::DefaultSettings {
@@ -70,12 +72,12 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     }
     analogWriteResolution(12); // DAC to 12bit resolution
     analogWrite(PIN_PITCH, gPitchAnalog);
-    digitalWrite(PIN_LED_INT, HIGH); // LED on
+    //digitalWrite(PIN_LED_INT, HIGH); // LED on
     digitalWrite(PIN_GATE, HIGH); // GATE on
-    debugNote(Channel, PitchMidi, Velocity, gPitchAnalog); // DEBUG
-    USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-    USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
-    USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
+    //debugNote(Channel, PitchMidi, Velocity, gPitchAnalog); // DEBUG
+    //USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
+    //USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
+    //USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
   }
 }
 
@@ -85,26 +87,61 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
     if (gNoteOnCounter == gNoteOffCounter) {
       gNoteOnCounter = 0;
       gNoteOffCounter = 0;
-      digitalWrite(PIN_LED_INT, LOW);
+      //digitalWrite(PIN_LED_INT, LOW);
       digitalWrite(PIN_GATE, LOW);
       //analogWrite(PIN_PITCH, 0);
     }
   }
-  USBserial.print("NoteOff - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-  USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
+  //USBserial.print("NoteOff - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
+  //USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
 }
 
 void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
   if (inNumber == CC_CUTOFF && gVelocityCutoff == false) {
     analogWriteResolution(8); // set to 8bit PWM resolution
     analogWrite(PIN_CUTOFF, inValue*0.9);
-    USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
+    //USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
   }
   if (inNumber == CC_LFO_RATE) {
     analogWriteResolution(8); // set to 8bit PWM resolution
     analogWrite(PIN_LFO_RATE, inValue*2);
     USBserial.print("CC_LFO: "); USBserial.println(inValue); // DEBUG
   }
+}
+
+void handleStart() {
+}
+
+void handleStop() {
+  gClockCount=0;
+  gBeatCount=1;
+}
+
+void handleContinue() {
+}
+
+void handleClock() {
+    if (gClockCount == 2) {
+      digitalWrite(PIN_LED_INT, LOW);
+    }
+
+    if (gClockCount == 1) {
+      USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
+      digitalWrite(PIN_LED_INT, HIGH); // blink on full beat
+      if (gBeatCount < 4) {
+        gBeatCount++;
+      }
+      else {
+        gBeatCount=1;
+      }
+    }
+
+    if (gClockCount <= 24) {
+      gClockCount++;
+    }
+    else {
+      gClockCount=0;
+    }
 }
 
 void setup() {
@@ -124,7 +161,11 @@ void setup() {
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.setHandleNoteOff(handleNoteOff); 
   MIDI.setHandleControlChange(handleControlChange);
-  USBserial.println("Hyperactive Teensy ready, waiting for MIDI input...");
+  MIDI.setHandleClock(handleClock);
+  MIDI.setHandleStart(handleStart);
+  MIDI.setHandleStop(handleStop);
+  MIDI.setHandleContinue(handleContinue);
+  USBserial.println("Hyperactive Teensy ready, waiting for MIDI input..."); // FIXME 
 } 
 
 void loop() {
