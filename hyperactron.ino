@@ -126,6 +126,7 @@ void setup() {
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.setHandleNoteOff(handleNoteOff); 
   MIDI.setHandleControlChange(handleControlChange);
+  while(!USBserial); // wait until USBserial is accessible
   USBserial.println("Hyperactive Teensy ready, waiting for MIDI input...");
 } 
 
