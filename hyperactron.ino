@@ -101,9 +101,11 @@ void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
     USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
   }
   if (inNumber == CC_LFO_RATE) {
+    float Volts = (inValue*2*3.3/256); // DEBUG
     analogWriteResolution(8); // set to 8bit PWM resolution
     analogWrite(PIN_LFO_RATE, inValue*2);
     USBserial.print("CC_LFO: "); USBserial.println(inValue); // DEBUG
+    USBserial.print("Volts_LFO: "); USBserial.println(Volts); // DEBUG
   }
 }
 
