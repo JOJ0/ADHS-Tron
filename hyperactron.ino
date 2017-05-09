@@ -70,12 +70,12 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     }
     analogWriteResolution(12); // DAC to 12bit resolution
     analogWrite(PIN_PITCH, gPitchAnalog);
-    digitalWrite(PIN_LED_INT, HIGH); // LED on
+    //digitalWrite(PIN_LED_INT, HIGH); // LED on
     digitalWrite(PIN_GATE, HIGH); // GATE on
     debugNote(Channel, PitchMidi, Velocity, gPitchAnalog); // DEBUG
-    USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-    USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
-    USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
+    //USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
+    //USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
+    //USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
   }
 }
 
@@ -90,22 +90,22 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
       //analogWrite(PIN_PITCH, 0);
     }
   }
-  USBserial.print("NoteOff - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-  USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
+  //USBserial.print("NoteOff - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
+  //USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
 }
 
 void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
   if (inNumber == CC_CUTOFF && gVelocityCutoff == false) {
     analogWriteResolution(8); // set to 8bit PWM resolution
     analogWrite(PIN_CUTOFF, inValue*0.9);
-    USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
+    //USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
   }
   if (inNumber == CC_LFO_RATE) {
     float Volts = (inValue*2*3.3/256); // DEBUG
     analogWriteResolution(8); // set to 8bit PWM resolution
     analogWrite(PIN_LFO_RATE, inValue*2);
-    USBserial.print("CC_LFO: "); USBserial.println(inValue); // DEBUG
-    USBserial.print("Volts_LFO: "); USBserial.println(Volts); // DEBUG
+    //USBserial.print("CC_LFO: "); USBserial.println(inValue); // DEBUG
+    //USBserial.print("Volts_LFO: "); USBserial.println(Volts); // DEBUG
   }
 }
 
