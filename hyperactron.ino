@@ -137,6 +137,15 @@ void handleClock() {
     case 2:
       digitalWrite(PIN_LED_INT, LOW);
       break;
+    case 5:
+      USBserial.println("e"); // DEBUG
+      break;
+    case 11:
+      USBserial.println("+"); // DEBUG
+      break;
+    case 17:
+      USBserial.println("a"); // DEBUG
+      break;
   }
 
   if (gClockCount < 23) {
