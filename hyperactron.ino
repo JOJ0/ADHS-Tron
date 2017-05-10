@@ -123,27 +123,28 @@ void handleContinue() {
 }
 
 void handleClock() {
-    if (gClockCount == 2) {
-      digitalWrite(PIN_LED_INT, LOW);
-    }
-
-    if (gClockCount == 1) {
-      USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
+  switch(gClockCount) {
+    case 0:
       digitalWrite(PIN_LED_INT, HIGH); // blink on full beat
+      USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
       if (gBeatCount < 4) {
         gBeatCount++;
       }
       else {
         gBeatCount=1;
       }
-    }
+      break;
+    case 2:
+      digitalWrite(PIN_LED_INT, LOW);
+      break;
+  }
 
-    if (gClockCount <= 24) {
-      gClockCount++;
-    }
-    else {
-      gClockCount=0;
-    }
+  if (gClockCount < 23) {
+    gClockCount++;
+  }
+  else {
+    gClockCount=0;
+  }
 }
 
 void setup() {
@@ -183,6 +184,7 @@ void loop() {
     digitalWrite(PIN_LED_PINK, LOW);
   }
   MIDI.read(); // Read incoming messages
+
 
   //gPitchAnalog = 2047;
   //debugNote(1, 2, 3, gPitchAnalog); // DEBUG
