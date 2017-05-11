@@ -17,7 +17,7 @@ const uint8_t PIN_SWITCH_CUTOFF_MODE = 5; // digital, velocity controls cutoff o
 const uint8_t PIN_LED_PINK = 7;
 const uint8_t PIN_LED_VIOLET = 9;
 const uint8_t PIN_LFO_RATE = 4; // PWM, to 30000 in setup
-const uint8_t PIN_LED_READY = 13;
+const uint8_t PIN_LED_READY = 9;
 
 //bool gMidiGateOn = false;
 //uint8_t gMidiNoteValue = 0;
@@ -168,11 +168,13 @@ void handleClock() {
   }
 }
 
-void  blinkLedWhenReady(uint8_t PIN_LED){
-  for (int i = 0; i<3; i++) {
-    digitalWrite(PIN_LED, HIGH);
+void  blinkLedWhenReady(uint8_t PIN_LED1, uint8_t PIN_LED2){
+  for (int i = 0; i<5; i++) {
+    digitalWrite(PIN_LED1, HIGH);
+    digitalWrite(PIN_LED2, HIGH);
     delay(200);
-    digitalWrite(PIN_LED, LOW);
+    digitalWrite(PIN_LED1, LOW);
+    digitalWrite(PIN_LED2, LOW);
     delay(200);
   }
 }
@@ -200,7 +202,7 @@ void setup() {
   MIDI.setHandleClock(handleClock);
   while(!USBserial); // wait until USBserial is accessible
   USBserial.println("Hyperactive Teensy ready, waiting for MIDI input...");
-  blinkLedWhenReady(PIN_LED_READY);
+  blinkLedWhenReady(PIN_LED_READY, PIN_LED_INT);
 } 
 
 void loop() {
