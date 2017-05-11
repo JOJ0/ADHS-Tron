@@ -29,6 +29,8 @@ uint8_t gNoteOffCounter = 0;
 bool gVelocityCutoff = false;
 uint8_t gClockCount = 0;
 uint8_t gBeatCount = 1;
+unsigned long gMicrosOnLastBeat = 0;
+float gBPM = 0;
 
 // MIDI settings struct
 struct MySettings : public midi::DefaultSettings {
@@ -113,11 +115,13 @@ void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
 }
 
 void handleStart() {
+  //gMicrosOnLastBeat=0;
 }
 
 void handleStop() {
   gClockCount=0;
   gBeatCount=1;
+  gBPM=0;
 }
 
 void handleContinue() {
@@ -127,25 +131,32 @@ void handleClock() {
   switch(gClockCount) {
     case 0:
       digitalWrite(PIN_LED_INT, HIGH); // blink on full beat
+      float microsSinceLastBeat;
+      microsSinceLastBeat = micros()-gMicrosOnLastBeat;
+      gBPM = 60000000/microsSinceLastBeat;
       USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
+      USBserial.print("micros ON last beat: "); USBserial.println(gMicrosOnLastBeat); // DEBUG
+      USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
+      USBserial.print("BPM: "); USBserial.println(gBPM, 4); // DEBUG
       if (gBeatCount < 4) {
         gBeatCount++;
       }
       else {
         gBeatCount=1;
       }
+      gMicrosOnLastBeat=micros();
       break;
     case 2:
       digitalWrite(PIN_LED_INT, LOW);
       break;
     case 5:
-      USBserial.println("e"); // DEBUG
+      //USBserial.println("e"); // DEBUG
       break;
     case 11:
-      USBserial.println("+"); // DEBUG
+      //USBserial.println("+"); // DEBUG
       break;
     case 17:
-      USBserial.println("a"); // DEBUG
+      //USBserial.println("a"); // DEBUG
       break;
   }
 
