@@ -18,6 +18,7 @@ const uint8_t PIN_LED_PINK = 7;
 const uint8_t PIN_LED_VIOLET = 9;
 const uint8_t PIN_LFO_RATE = 4; // PWM, to 30000 in setup
 const uint8_t PIN_LED_READY = 9;
+const uint8_t PIN_LED_CLOCK = 15; // FIXME which one?
 
 //bool gMidiGateOn = false;
 //uint8_t gMidiNoteValue = 0;
@@ -139,15 +140,18 @@ void handleClock() {
       USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
       USBserial.print("BPM: "); USBserial.println(gBPM, 4); // DEBUG
       if (gBeatCount < 4) {
+        analogWrite(PIN_LED_CLOCK, 128); // blink damped on beats 2,3,4
         gBeatCount++;
       }
       else {
+        analogWrite(PIN_LED_CLOCK, 255); // blink fully lit on first beat
         gBeatCount=1;
       }
       gMicrosOnLastBeat=micros();
       break;
     case 2:
-      digitalWrite(PIN_LED_INT, LOW);
+      digitalWrite(PIN_LED_INT, 0);
+      analogWrite(PIN_LED_CLOCK, 0);
       break;
     case 5:
       //USBserial.println("e"); // DEBUG
