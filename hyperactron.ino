@@ -8,12 +8,14 @@ const uint8_t LOWEST_KEY = 36; // 24=C2, 36=C3
 const uint8_t HIGHEST_KEY = 72; // 84=C7, 72=C6, 60=C5, 48=C4, 
 const uint8_t CC_CUTOFF = 74; // 74 usually is filter cutoff 
 const uint8_t CC_LFO_RATE = 75; // 75 is not a standard CC
+const uint8_t CC_PANIC = 123; // 123 is "All Notes Off" message
 
 const uint8_t PIN_LED_INT = 13;
 const uint8_t PIN_GATE = 2; // digital
 const uint8_t PIN_CUTOFF = 3; // PWM, to 30000 in setup
 const uint8_t PIN_PITCH = A14; // DAC, to 30000 in setup
 const uint8_t PIN_SWITCH_CUTOFF_MODE = 5; // digital, velocity controls cutoff on/off switch
+const uint8_t PIN_MIDI_SERIAL = 0; // Serial Port 1 (Pin 0) is called "Serial1" in software
 const uint8_t PIN_LED_PINK = 7;
 const uint8_t PIN_LED_VIOLET = 9;
 const uint8_t PIN_LFO_RATE = 4; // PWM, to 30000 in setup
@@ -39,8 +41,8 @@ struct MySettings : public midi::DefaultSettings {
   static const bool UseRunningStatus = true;
 };
 
-MIDI_CREATE_INSTANCE(HardwareSerial, MIDIserial, MIDI); // port is selectable here
-//MIDI_CREATE_CUSTOM_INSTANCE(SoftwareSerial, MIDIserial, MIDI, MySettings); // altering settings
+//MIDI_CREATE_INSTANCE(HardwareSerial, MIDIserial, MIDI); // port is selectable here
+MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDIserial, MIDI, MySettings); // altering settings
 
 void debugNote (byte channel, byte pitch, byte velocity, uint16_t PitchAnalog) {
   float Volts = (gPitchAnalog*3.3/4096);
@@ -77,12 +79,13 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     }
     analogWriteResolution(12); // DAC to 12bit resolution
     analogWrite(PIN_PITCH, gPitchAnalog);
-    //digitalWrite(PIN_LED_INT, HIGH); // LED on
     digitalWrite(PIN_GATE, HIGH); // GATE on
+    //
+    digitalWrite(PIN_LED_INT, HIGH); // DEBUG LED on
     //debugNote(Channel, PitchMidi, Velocity, gPitchAnalog); // DEBUG
-    //USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-    //USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
-    //USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
+    USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
+    USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
+    USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
   }
 }
 
@@ -92,7 +95,7 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
     if (gNoteOnCounter == gNoteOffCounter) {
       gNoteOnCounter = 0;
       gNoteOffCounter = 0;
-      //digitalWrite(PIN_LED_INT, LOW);
+      digitalWrite(PIN_LED_INT, LOW);
       digitalWrite(PIN_GATE, LOW);
       //analogWrite(PIN_PITCH, 0);
     }
@@ -108,11 +111,18 @@ void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
     //USBserial.print("CC_CUTOFF: "); USBserial.println(inValue); // DEBUG
   }
   if (inNumber == CC_LFO_RATE) {
-    float Volts = (inValue*2*3.3/256); // DEBUG
     analogWriteResolution(8); // set to 8bit PWM resolution
     analogWrite(PIN_LFO_RATE, inValue*2);
+    //float Volts = (inValue*2*3.3/256); // DEBUG
     //USBserial.print("CC_LFO: "); USBserial.println(inValue); // DEBUG
     //USBserial.print("Volts_LFO: "); USBserial.println(Volts); // DEBUG
+  }
+  if (inNumber == CC_PANIC) {
+    gNoteOnCounter = 0;
+    gNoteOffCounter = 0;
+    digitalWrite(PIN_GATE, LOW);
+    digitalWrite(PIN_LED_INT, LOW);
+    USBserial.print("Panic! - All Notes Off: "); USBserial.println(CC_PANIC); // DEBUG
   }
 }
 
@@ -124,6 +134,9 @@ void handleStop() {
   gClockCount=0;
   gBeatCount=1;
   gBPM=0;
+  gNoteOnCounter = 0;
+  gNoteOffCounter = 0;
+  digitalWrite(PIN_GATE, LOW);
 }
 
 void handleContinue() {
@@ -137,8 +150,8 @@ void handleClock() {
       microsSinceLastBeat = micros()-gMicrosOnLastBeat;
       gBPM = 60000000/microsSinceLastBeat;
       USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
-      USBserial.print("micros ON last beat: "); USBserial.println(gMicrosOnLastBeat); // DEBUG
-      USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
+      //USBserial.print("micros ON last beat: "); USBserial.println(gMicrosOnLastBeat); // DEBUG
+      //USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
       USBserial.print("BPM: "); USBserial.println(gBPM, 4); // DEBUG
       if (gBeatCount < 4) {
         analogWrite(PIN_LED_CLOCK, 128); // blink damped on beats 2,3,4
@@ -192,6 +205,7 @@ void setup() {
   pinMode(PIN_SWITCH_CUTOFF_MODE, INPUT);
   pinMode(PIN_LED_PINK, OUTPUT);
   pinMode(PIN_LED_VIOLET, OUTPUT);
+  pinMode(PIN_MIDI_SERIAL, INPUT_PULLUP);
   analogWriteResolution(8); // default to 8bit PWM resolution
   //analogWriteFrequency(PIN_PITCH, 30000);
   analogWriteFrequency(PIN_CUTOFF, 30000);
