@@ -15,13 +15,14 @@ const uint8_t PIN_GATE = 2; // digital
 const uint8_t PIN_CUTOFF = 3; // PWM, to 30000 in setup
 const uint8_t PIN_PITCH = A14; // DAC, to 30000 in setup
 const uint8_t PIN_SWITCH_CUTOFF_MODE = 5; // digital, velocity controls cutoff on/off switch
+const uint8_t PIN_SWITCH_CLOCK = 8; // digital, metronome on/off switch
 const uint8_t PIN_MIDI_SERIAL = 0; // Serial Port 1 (Pin 0) is called "Serial1" in software
-const uint8_t PIN_LED_PINK = 7;
-const uint8_t PIN_LED_VIOLET = 9;
+const uint8_t PIN_LED_PINK = 9; // cutoff controlled by CC
+const uint8_t PIN_LED_VIOLET = 7;  // cutoff controlled by velocity
 const uint8_t PIN_LFO_RATE = 4; // PWM, to 30000 in setup
 const uint8_t PIN_LED_READY1 = 7;
 const uint8_t PIN_LED_READY2 = 9;
-const uint8_t PIN_LED_CLOCK = 15; // FIXME which one?
+const uint8_t PIN_LED_CLOCK = 6; // metronome
 
 //bool gMidiGateOn = false;
 //uint8_t gMidiNoteValue = 0;
@@ -35,6 +36,7 @@ uint8_t gClockCount = 0;
 uint8_t gBeatCount = 1;
 unsigned long gMicrosOnLastBeat = 0;
 float gBPM = 0;
+bool gMetronome = false;
 
 // MIDI settings struct
 struct MySettings : public midi::DefaultSettings {
@@ -86,6 +88,7 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
     USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
     USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
+    USBserial.print("gMetronome: "); USBserial.println(gMetronome); // DEBUG
   }
 }
 
@@ -145,29 +148,39 @@ void handleContinue() {
 void handleClock() {
   switch(gClockCount) {
     case 0:
-      digitalWrite(PIN_LED_INT, HIGH); // blink on full beat
+      // BPM calc start
       float microsSinceLastBeat;
       microsSinceLastBeat = micros()-gMicrosOnLastBeat;
       gBPM = 60000000/microsSinceLastBeat;
-      USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
       //USBserial.print("micros ON last beat: "); USBserial.println(gMicrosOnLastBeat); // DEBUG
       //USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
       USBserial.print("BPM: "); USBserial.println(gBPM, 4); // DEBUG
-      if (gBeatCount < 4) {
-        analogWrite(PIN_LED_CLOCK, 128); // blink damped on beats 2,3,4
-        gBeatCount++;
+      // BPM calc end
+      // metronome start
+      if (gMetronome == true) {
+        digitalWrite(PIN_LED_INT, HIGH); // DEBUG blink on full beat
+        USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
+        if (gBeatCount == 1) { 
+          //analogWrite(PIN_LED_CLOCK, 255); // blink fully lit on first beat
+          digitalWrite(PIN_LED_CLOCK, HIGH);
+        }
+        else {
+          analogWrite(PIN_LED_CLOCK, 255); // blink damped on beats 2,3,4
+        }
       }
       else {
-        analogWrite(PIN_LED_CLOCK, 255); // blink fully lit on first beat
-        gBeatCount=1;
+        analogWrite(PIN_LED_CLOCK, 0); // metronome LED off
       }
       gMicrosOnLastBeat=micros();
+      if (gBeatCount < 4) { gBeatCount++; }
+      else { gBeatCount=1; } // beat calc
       break;
     case 2:
       digitalWrite(PIN_LED_INT, 0);
-      analogWrite(PIN_LED_CLOCK, 0);
+      //analogWrite(PIN_LED_CLOCK, 0);
       break;
     case 5:
+      analogWrite(PIN_LED_CLOCK, 0); // metronome lit duration
       //USBserial.println("e"); // DEBUG
       break;
     case 11:
@@ -206,6 +219,8 @@ void setup() {
   pinMode(PIN_LED_PINK, OUTPUT);
   pinMode(PIN_LED_VIOLET, OUTPUT);
   pinMode(PIN_MIDI_SERIAL, INPUT_PULLUP);
+  pinMode(PIN_LED_CLOCK, OUTPUT); // metronome
+  pinMode(PIN_SWITCH_CLOCK, INPUT); // metronome
   analogWriteResolution(8); // default to 8bit PWM resolution
   //analogWriteFrequency(PIN_PITCH, 30000);
   analogWriteFrequency(PIN_CUTOFF, 30000);
@@ -229,14 +244,22 @@ void setup() {
 
 void loop() {
   if (digitalRead(PIN_SWITCH_CUTOFF_MODE) == HIGH) {
-    gVelocityCutoff = true; // pink LED
+    gVelocityCutoff = true; // violet LED
+    digitalWrite(PIN_LED_VIOLET, HIGH);
+    digitalWrite(PIN_LED_PINK, LOW);
+  }
+  else {
+    gVelocityCutoff = false; // pink LED
     digitalWrite(PIN_LED_PINK, HIGH);
     digitalWrite(PIN_LED_VIOLET, LOW);
   }
+  if (digitalRead(PIN_SWITCH_CLOCK) == HIGH) {
+    gMetronome = true; 
+    //USBserial.println("metronome on");
+  }
   else {
-    gVelocityCutoff = false; // violet LED
-    digitalWrite(PIN_LED_VIOLET, HIGH);
-    digitalWrite(PIN_LED_PINK, LOW);
+    gMetronome = false; 
+    //USBserial.println("metronome off");
   }
   MIDI.read(); // Read incoming messages
 
