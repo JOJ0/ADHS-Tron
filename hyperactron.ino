@@ -258,7 +258,8 @@ void loop() {
     //USBserial.println("metronome on");
   }
   else {
-    gMetronome = false; 
+    gMetronome = true; // BROKEN SWITCH WORKAROUND 
+    //digitalWrite(PIN_LED_CLOCK, LOW);
     //USBserial.println("metronome off");
   }
   MIDI.read(); // Read incoming messages
