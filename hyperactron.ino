@@ -1,6 +1,10 @@
 #include <MIDI.h>
+#include <advancedSerial.h>
 #define USBserial Serial
 #define MIDIserial Serial1
+#define VERBOSITY Level::vvvv
+#define DEBUGGING on()
+//#define DEBUGGING off()
 
 const uint8_t MIDI_CH = 1;
 // Ableton C-2 = C0 = 00, Ableton C2 = C0 = 24; my keyb default range: 36-72
@@ -46,20 +50,6 @@ struct MySettings : public midi::DefaultSettings {
 //MIDI_CREATE_INSTANCE(HardwareSerial, MIDIserial, MIDI); // port is selectable here
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDIserial, MIDI, MySettings); // altering settings
 
-void debugNote (byte channel, byte pitch, byte velocity, uint16_t PitchAnalog) {
-  float Volts = (gPitchAnalog*3.3/4096);
-  USBserial.print(channel);
-  USBserial.print(" ");
-  USBserial.print(pitch);
-  USBserial.print(" ");
-  USBserial.print(velocity);
-  USBserial.print(" ");
-  USBserial.print(PitchAnalog);
-  USBserial.print(" ");
-  USBserial.print(Volts);
-  USBserial.println(" ");
-}
-
 void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
   if (PitchMidi >= LOWEST_KEY && PitchMidi <= HIGHEST_KEY) {
     gNoteOnCounter++;
@@ -84,17 +74,22 @@ void handleNoteOn(byte Channel, byte PitchMidi, byte Velocity) {
     digitalWrite(PIN_GATE, HIGH); // GATE on
     //
     digitalWrite(PIN_LED_INT, HIGH); // DEBUG LED on
+    aSerial.v().p("--- gVelocityCutoff: ").p(gVelocityCutoff); // DEBUG
+    aSerial.v().p(", gMetronome: ").pln(gMetronome); // DEBUG
+    aSerial.vvvv().p("channel PitchMidi Velocity gPitchAnalog: "); // DEBUG
+    aSerial.vvvv().p(Channel).p(" ").p(PitchMidi).p(" "); // DEBUG
+    aSerial.vvvv().p(Velocity).p(" ").p(gPitchAnalog).pln(" "); // DEBUG
+    aSerial.v().p("NoteOn  - gNoteOnCounter:  ").p(gNoteOnCounter); // DEBUG
+    aSerial.v().p(", gNoteOffCounter: ").pln(gNoteOffCounter); // DEBUG
     //debugNote(Channel, PitchMidi, Velocity, gPitchAnalog); // DEBUG
-    USBserial.print("NoteOn - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-    USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
-    USBserial.print("gVelocityCutoff: "); USBserial.println(gVelocityCutoff); // DEBUG
-    USBserial.print("gMetronome: "); USBserial.println(gMetronome); // DEBUG
   }
 }
 
 void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with 0 velo is NoteOff. 
   if (PitchMidi >= LOWEST_KEY && PitchMidi <= HIGHEST_KEY) {
     gNoteOffCounter++;
+    aSerial.vv().p("NoteOff - gNoteOffCounter: ").p(gNoteOffCounter); // DEBUG
+    aSerial.vv().p(", gNoteOnCounter:  ").pln(gNoteOnCounter); // DEBUG
     if (gNoteOnCounter == gNoteOffCounter) {
       gNoteOnCounter = 0;
       gNoteOffCounter = 0;
@@ -103,8 +98,6 @@ void handleNoteOff(byte Channel, byte PitchMidi, byte Velocity) { // NoteOn with
       //analogWrite(PIN_PITCH, 0);
     }
   }
-  //USBserial.print("NoteOff - gNoteOnCounter: "); USBserial.print(gNoteOnCounter); // DEBUG
-  //USBserial.print(", gNoteOffCounter: "); USBserial.println(gNoteOffCounter); // DEBUG
 }
 
 void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
@@ -125,7 +118,7 @@ void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
     gNoteOffCounter = 0;
     digitalWrite(PIN_GATE, LOW);
     digitalWrite(PIN_LED_INT, LOW);
-    USBserial.print("Panic! - All Notes Off: "); USBserial.println(CC_PANIC); // DEBUG
+    aSerial.v().p("Panic! - All Notes Off CC received: ").pln(inNumber); // DEBUG
   }
 }
 
@@ -154,12 +147,12 @@ void handleClock() {
       gBPM = 60000000/microsSinceLastBeat;
       //USBserial.print("micros ON last beat: "); USBserial.println(gMicrosOnLastBeat); // DEBUG
       //USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
-      USBserial.print("BPM: "); USBserial.println(gBPM, 4); // DEBUG
+      aSerial.vvv().print("BPM: "); aSerial.vvv().println(gBPM, 4); // DEBUG
       // BPM calc end
       // metronome start
       if (gMetronome == true) {
-        digitalWrite(PIN_LED_INT, HIGH); // DEBUG blink on full beat
-        USBserial.print("gBeatCount: "); USBserial.println(gBeatCount); // DEBUG
+        digitalWrite(PIN_LED_INT, HIGH); // DEBUG blink internal LED on full beat
+        aSerial.vvv().p("gBeatCount: ").pln(gBeatCount); // DEBUG
         if (gBeatCount == 1) { 
           //analogWrite(PIN_LED_CLOCK, 255); // blink fully lit on first beat
           digitalWrite(PIN_LED_CLOCK, HIGH);
@@ -227,6 +220,9 @@ void setup() {
   analogWriteFrequency(PIN_LFO_RATE, 30000);
   digitalWrite(PIN_LED_INT, LOW); // PIN_LED_INT off initially
   USBserial.begin(115200); // debugging here
+  aSerial.setPrinter(USBserial);
+  aSerial.setFilter(VERBOSITY);
+  aSerial.DEBUGGING;  // enable/disable debug output in #define section ^
   //MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.begin(MIDI_CH);  // Listen to incoming messages on given channel
   MIDI.setHandleNoteOn(handleNoteOn);
