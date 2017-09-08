@@ -154,11 +154,11 @@ void handleClock() {
         digitalWrite(PIN_LED_INT, HIGH); // DEBUG blink internal LED on full beat
         aSerial.vvv().p("gBeatCount: ").pln(gBeatCount); // DEBUG
         if (gBeatCount == 1) { 
-          //analogWrite(PIN_LED_CLOCK, 255); // blink fully lit on first beat
-          digitalWrite(PIN_LED_CLOCK, HIGH);
+          digitalWrite(PIN_LED_CLOCK, HIGH); // blink fully lit on first beat
         }
         else {
-          analogWrite(PIN_LED_CLOCK, 255); // blink damped on beats 2,3,4
+          analogWriteResolution(8); // set to 8bit PWM resolution
+          analogWrite(PIN_LED_CLOCK, 48); // blink damped on beats 2,3,4
         }
       }
       else {
@@ -170,7 +170,6 @@ void handleClock() {
       break;
     case 2:
       digitalWrite(PIN_LED_INT, 0);
-      //analogWrite(PIN_LED_CLOCK, 0);
       break;
     case 5:
       analogWrite(PIN_LED_CLOCK, 0); // metronome lit duration
