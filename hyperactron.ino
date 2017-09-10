@@ -118,6 +118,7 @@ void handleControlChange(byte inChannel, byte inNumber, byte inValue) {
     gNoteOffCounter = 0;
     digitalWrite(PIN_GATE, LOW);
     digitalWrite(PIN_LED_INT, LOW);
+    analogWrite(PIN_LED_CLOCK, 0);
     aSerial.v().p("Panic! - All Notes Off CC received: ").pln(inNumber); // DEBUG
   }
 }
@@ -144,10 +145,11 @@ void handleClock() {
       // BPM calc start
       float microsSinceLastBeat;
       microsSinceLastBeat = micros()-gMicrosOnLastBeat;
+      gMicrosOnLastBeat=micros();
       gBPM = 60000000/microsSinceLastBeat;
       //USBserial.print("micros ON last beat: "); USBserial.println(gMicrosOnLastBeat); // DEBUG
       //USBserial.print("micros since last beat: "); USBserial.println(microsSinceLastBeat); // DEBUG
-      aSerial.vvv().print("BPM: "); aSerial.vvv().println(gBPM, 4); // DEBUG
+      aSerial.vvv().print("gBPM: ").println(gBPM); // DEBUG
       // BPM calc end
       // metronome start
       if (gMetronome == true) {
@@ -164,7 +166,6 @@ void handleClock() {
       else {
         analogWrite(PIN_LED_CLOCK, 0); // metronome LED off
       }
-      gMicrosOnLastBeat=micros();
       if (gBeatCount < 4) { gBeatCount++; }
       else { gBeatCount=1; } // beat calc
       break;
